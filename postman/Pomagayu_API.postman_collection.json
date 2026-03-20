@@ -1,0 +1,553 @@
+{
+	"info": {
+		"name": "Pomagayu API",
+		"description": "Public API for the Pomagayu TikTok-style content feed application.",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"variable": [
+		{
+			"key": "base_url",
+			"value": "http://localhost:8000",
+			"type": "string"
+		}
+	],
+	"item": [
+		{
+			"name": "Feed",
+			"item": [
+				{
+					"name": "Get Feed",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/feed?page=1&per_page=15",
+							"host": ["{{base_url}}"],
+							"path": ["api", "feed"],
+							"query": [
+								{
+									"key": "page",
+									"value": "1",
+									"description": "Page number for pagination"
+								},
+								{
+									"key": "per_page",
+									"value": "15",
+									"description": "Items per page (default 15)"
+								}
+							]
+						},
+						"description": "Returns paginated feed of published posts ordered by sort_order then published_at."
+					}
+				},
+				{
+					"name": "Get Feed - Videos Only",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/feed?type=video&page=1&per_page=15",
+							"host": ["{{base_url}}"],
+							"path": ["api", "feed"],
+							"query": [
+								{
+									"key": "type",
+									"value": "video",
+									"description": "Filter by type: video or image"
+								},
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "per_page",
+									"value": "15"
+								}
+							]
+						},
+						"description": "Returns only video posts from the feed."
+					}
+				},
+				{
+					"name": "Get Feed - Images Only",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/feed?type=image&page=1&per_page=15",
+							"host": ["{{base_url}}"],
+							"path": ["api", "feed"],
+							"query": [
+								{
+									"key": "type",
+									"value": "image",
+									"description": "Filter by type: video or image"
+								},
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "per_page",
+									"value": "15"
+								}
+							]
+						},
+						"description": "Returns only image posts from the feed."
+					}
+				}
+			]
+		},
+		{
+			"name": "Posts",
+			"item": [
+				{
+					"name": "Get Featured Posts",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/posts/featured",
+							"host": ["{{base_url}}"],
+							"path": ["api", "posts", "featured"]
+						},
+						"description": "Returns published posts that are marked as featured."
+					}
+				},
+				{
+					"name": "Get Single Post",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/posts/1",
+							"host": ["{{base_url}}"],
+							"path": ["api", "posts", "1"]
+						},
+						"description": "Returns details for a single published post. Returns 404 if post is not published."
+					}
+				},
+				{
+					"name": "Record Post View",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/posts/1/view",
+							"host": ["{{base_url}}"],
+							"path": ["api", "posts", "1", "view"]
+						},
+						"description": "Increments the view count for a published post."
+					}
+				}
+			]
+		},
+		{
+			"name": "Admin Auth",
+			"item": [
+				{
+					"name": "Login Page",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/admin/login",
+							"host": ["{{base_url}}"],
+							"path": ["admin", "login"]
+						},
+						"description": "Admin login page (Blade HTML)."
+					}
+				},
+				{
+					"name": "Login",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/x-www-form-urlencoded"
+							}
+						],
+						"body": {
+							"mode": "urlencoded",
+							"urlencoded": [
+								{
+									"key": "email",
+									"value": "admin@example.com"
+								},
+								{
+									"key": "password",
+									"value": "Pmg@Adm!n2026#Sec"
+								},
+								{
+									"key": "_token",
+									"value": "{{csrf_token}}",
+									"description": "Get from login page HTML or cookie"
+								}
+							]
+						},
+						"url": {
+							"raw": "{{base_url}}/admin/login",
+							"host": ["{{base_url}}"],
+							"path": ["admin", "login"]
+						},
+						"description": "Authenticate as admin. Session-based auth - requires CSRF token from the login page."
+					}
+				},
+				{
+					"name": "Logout",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/x-www-form-urlencoded"
+							}
+						],
+						"body": {
+							"mode": "urlencoded",
+							"urlencoded": [
+								{
+									"key": "_token",
+									"value": "{{csrf_token}}"
+								}
+							]
+						},
+						"url": {
+							"raw": "{{base_url}}/admin/logout",
+							"host": ["{{base_url}}"],
+							"path": ["admin", "logout"]
+						},
+						"description": "Log out the current admin session."
+					}
+				}
+			]
+		},
+		{
+			"name": "Admin - Dashboard",
+			"item": [
+				{
+					"name": "Dashboard",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/admin/dashboard",
+							"host": ["{{base_url}}"],
+							"path": ["admin", "dashboard"]
+						},
+						"description": "Admin dashboard with post statistics (requires auth)."
+					}
+				}
+			]
+		},
+		{
+			"name": "Admin - Posts",
+			"item": [
+				{
+					"name": "List Posts",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/admin/posts?search=&type=&status=",
+							"host": ["{{base_url}}"],
+							"path": ["admin", "posts"],
+							"query": [
+								{
+									"key": "search",
+									"value": "",
+									"description": "Search by title"
+								},
+								{
+									"key": "type",
+									"value": "",
+									"description": "Filter: video or image"
+								},
+								{
+									"key": "status",
+									"value": "",
+									"description": "Filter: draft or published"
+								}
+							]
+						},
+						"description": "List all posts with optional search and filters (requires auth)."
+					}
+				},
+				{
+					"name": "Create Post Form",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/admin/posts/create",
+							"host": ["{{base_url}}"],
+							"path": ["admin", "posts", "create"]
+						},
+						"description": "Show create post form (requires auth)."
+					}
+				},
+				{
+					"name": "Store Post",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "_token",
+									"value": "{{csrf_token}}",
+									"type": "text"
+								},
+								{
+									"key": "type",
+									"value": "image",
+									"type": "text",
+									"description": "image or video"
+								},
+								{
+									"key": "title",
+									"value": "Test Post from Postman",
+									"type": "text"
+								},
+								{
+									"key": "description",
+									"value": "Created via Postman",
+									"type": "text"
+								},
+								{
+									"key": "media",
+									"type": "file",
+									"src": "",
+									"description": "Upload image or video file"
+								},
+								{
+									"key": "thumbnail",
+									"type": "file",
+									"src": "",
+									"description": "Optional thumbnail image"
+								},
+								{
+									"key": "status",
+									"value": "draft",
+									"type": "text",
+									"description": "draft or published"
+								},
+								{
+									"key": "sort_order",
+									"value": "0",
+									"type": "text"
+								},
+								{
+									"key": "is_featured",
+									"value": "0",
+									"type": "text",
+									"description": "0 or 1"
+								}
+							]
+						},
+						"url": {
+							"raw": "{{base_url}}/admin/posts",
+							"host": ["{{base_url}}"],
+							"path": ["admin", "posts"]
+						},
+						"description": "Create a new post with media upload (requires auth + CSRF)."
+					}
+				},
+				{
+					"name": "Edit Post Form",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/admin/posts/1/edit",
+							"host": ["{{base_url}}"],
+							"path": ["admin", "posts", "1", "edit"]
+						},
+						"description": "Show edit form for a post (requires auth)."
+					}
+				},
+				{
+					"name": "Update Post",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "_token",
+									"value": "{{csrf_token}}",
+									"type": "text"
+								},
+								{
+									"key": "_method",
+									"value": "PUT",
+									"type": "text"
+								},
+								{
+									"key": "type",
+									"value": "image",
+									"type": "text"
+								},
+								{
+									"key": "title",
+									"value": "Updated Title",
+									"type": "text"
+								},
+								{
+									"key": "description",
+									"value": "Updated description",
+									"type": "text"
+								},
+								{
+									"key": "media",
+									"type": "file",
+									"src": "",
+									"description": "Leave empty to keep current file"
+								},
+								{
+									"key": "status",
+									"value": "published",
+									"type": "text"
+								},
+								{
+									"key": "sort_order",
+									"value": "0",
+									"type": "text"
+								},
+								{
+									"key": "is_featured",
+									"value": "1",
+									"type": "text"
+								}
+							]
+						},
+						"url": {
+							"raw": "{{base_url}}/admin/posts/1",
+							"host": ["{{base_url}}"],
+							"path": ["admin", "posts", "1"]
+						},
+						"description": "Update an existing post (requires auth + CSRF). Uses POST with _method=PUT."
+					}
+				},
+				{
+					"name": "Delete Post",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/x-www-form-urlencoded"
+							}
+						],
+						"body": {
+							"mode": "urlencoded",
+							"urlencoded": [
+								{
+									"key": "_token",
+									"value": "{{csrf_token}}"
+								},
+								{
+									"key": "_method",
+									"value": "DELETE"
+								}
+							]
+						},
+						"url": {
+							"raw": "{{base_url}}/admin/posts/1",
+							"host": ["{{base_url}}"],
+							"path": ["admin", "posts", "1"]
+						},
+						"description": "Soft-delete a post (requires auth + CSRF)."
+					}
+				},
+				{
+					"name": "Publish Post",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/x-www-form-urlencoded"
+							}
+						],
+						"body": {
+							"mode": "urlencoded",
+							"urlencoded": [
+								{
+									"key": "_token",
+									"value": "{{csrf_token}}"
+								}
+							]
+						},
+						"url": {
+							"raw": "{{base_url}}/admin/posts/1/publish",
+							"host": ["{{base_url}}"],
+							"path": ["admin", "posts", "1", "publish"]
+						},
+						"description": "Publish a draft post (requires auth + CSRF)."
+					}
+				},
+				{
+					"name": "Unpublish Post",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/x-www-form-urlencoded"
+							}
+						],
+						"body": {
+							"mode": "urlencoded",
+							"urlencoded": [
+								{
+									"key": "_token",
+									"value": "{{csrf_token}}"
+								}
+							]
+						},
+						"url": {
+							"raw": "{{base_url}}/admin/posts/1/unpublish",
+							"host": ["{{base_url}}"],
+							"path": ["admin", "posts", "1", "unpublish"]
+						},
+						"description": "Unpublish a published post back to draft (requires auth + CSRF)."
+					}
+				}
+			]
+		}
+	]
+}
