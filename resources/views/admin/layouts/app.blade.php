@@ -87,6 +87,7 @@
         <div class="nav-links">
             <a href="{{ route('admin.dashboard') }}" class="{{ request()->routeIs('admin.dashboard') ? 'active' : '' }}">Dashboard</a>
             <a href="{{ route('admin.posts.index') }}" class="{{ request()->routeIs('admin.posts.*') ? 'active' : '' }}">Posts</a>
+            <a href="{{ asset('postman/Pomagayu_API.postman_collection.json') }}" download style="opacity:0.7;font-size:0.75rem;">Postman</a>
             <form action="{{ route('admin.logout') }}" method="POST" class="inline-form">
                 @csrf
                 <button type="submit" style="background:none; border:none; color:#d1d5db; cursor:pointer; font-size:0.875rem;">Logout</button>
