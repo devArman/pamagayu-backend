@@ -19,21 +19,64 @@
     @error('description') <div class="form-error">{{ $message }}</div> @enderror
 </div>
 
-<div class="form-group">
-    <label class="form-label" for="media">Media File {{ isset($post) ? '(leave empty to keep current)' : '' }}</label>
-    <input class="form-input" type="file" id="media" name="media" accept="image/*,video/*" {{ isset($post) ? '' : 'required' }}>
-    @error('media') <div class="form-error">{{ $message }}</div> @enderror
+<div class="form-group" id="media-group">
+    <label class="form-label">
+        Media File(s) {{ isset($post) ? '(leave empty to keep current)' : '' }}
+    </label>
 
-    @if(isset($post) && $post->media_path)
-        <div style="margin-top: 0.5rem;">
-            @if($post->isImage())
+    <div id="media-video" style="display:none;">
+        <input class="form-input" type="file" name="media" accept="video/*">
+    </div>
+
+    <div id="media-image" style="display:none;">
+        <input class="form-input" type="file" name="media[]" accept="image/*" multiple>
+        <small style="color: #6b7280; display: block; margin-top: 0.25rem;">You can select up to 6 images.</small>
+    </div>
+
+    @error('media') <div class="form-error">{{ $message }}</div> @enderror
+    @error('media.*') <div class="form-error">{{ $message }}</div> @enderror
+
+    @if(isset($post))
+        @if($post->isImage() && $post->images->isNotEmpty())
+            <div style="margin-top: 0.5rem; display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                @foreach($post->images as $image)
+                    <img src="{{ $image->image_url }}" alt="{{ $post->title }}" class="media-preview-lg" style="max-width: 150px;">
+                @endforeach
+            </div>
+        @elseif($post->isImage() && $post->media_path)
+            <div style="margin-top: 0.5rem;">
                 <img src="{{ $post->media_url }}" alt="{{ $post->title }}" class="media-preview-lg">
-            @else
+            </div>
+        @elseif($post->isVideo() && $post->media_path)
+            <div style="margin-top: 0.5rem;">
                 <video src="{{ $post->media_url }}" class="media-preview-lg" controls></video>
-            @endif
-        </div>
+            </div>
+        @endif
     @endif
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const typeSelect = document.getElementById('type');
+    const videoInput = document.getElementById('media-video');
+    const imageInput = document.getElementById('media-image');
+
+    function toggleMedia() {
+        if (typeSelect.value === 'video') {
+            videoInput.style.display = 'block';
+            imageInput.style.display = 'none';
+            imageInput.querySelector('input').value = '';
+        } else {
+            videoInput.style.display = 'none';
+            imageInput.style.display = 'block';
+            videoInput.querySelector('input').value = '';
+        }
+    }
+
+    typeSelect.addEventListener('change', toggleMedia);
+    toggleMedia();
+});
+</script>
 
 <div class="form-group">
     <label class="form-label" for="thumbnail">Thumbnail (optional)</label>

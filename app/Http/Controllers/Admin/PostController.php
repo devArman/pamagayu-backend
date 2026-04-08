@@ -60,6 +60,8 @@ class PostController extends Controller
 
     public function edit(Post $post): View
     {
+        $post->load('images');
+
         return view('admin.posts.edit', compact('post'));
     }
 
