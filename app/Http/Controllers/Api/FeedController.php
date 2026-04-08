@@ -18,7 +18,7 @@ class FeedController extends Controller
 
     public function index(Request $request): PostCollection
     {
-        $query = Post::published()->feedOrdered();
+        $query = Post::published()->feedOrdered()->with('images');
 
         if ($type = $request->input('type')) {
             $query->ofType($type);
@@ -32,6 +32,8 @@ class FeedController extends Controller
         if (!$post->isPublished()) {
             return response()->json(['message' => 'Post not found.'], 404);
         }
+
+        $post->load('images');
 
         return new PostResource($post);
     }
@@ -49,7 +51,7 @@ class FeedController extends Controller
 
     public function featured(): PostCollection
     {
-        $posts = Post::published()->featured()->feedOrdered()->paginate(15);
+        $posts = Post::published()->featured()->feedOrdered()->with('images')->paginate(15);
 
         return new PostCollection($posts);
     }

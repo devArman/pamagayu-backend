@@ -16,6 +16,7 @@ class PostResource extends JsonResource
             'description' => $this->description,
             'media_url' => $this->media_url,
             'thumbnail_url' => $this->thumbnail_url,
+            'gallery_urls' => $this->when($this->isImage(), fn () => $this->gallery_urls),
             'views_count' => $this->views_count,
             'is_featured' => $this->is_featured,
             'published_at' => $this->published_at?->toIso8601String(),

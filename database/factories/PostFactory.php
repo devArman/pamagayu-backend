@@ -61,4 +61,16 @@ class PostFactory extends Factory
             'media_path' => 'images/sample.jpg',
         ]);
     }
+
+    public function gallery(int $count = 4): static
+    {
+        return $this->image()->afterCreating(function (\App\Models\Post $post) use ($count) {
+            for ($i = 0; $i < $count; $i++) {
+                $post->images()->create([
+                    'image_path' => "images/sample-{$i}.jpg",
+                    'sort_order' => $i,
+                ]);
+            }
+        });
+    }
 }

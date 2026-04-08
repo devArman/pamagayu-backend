@@ -32,4 +32,27 @@ class MediaUploadService
 
         return $this->upload($newFile, $type);
     }
+
+    /**
+     * @param  UploadedFile[]  $files
+     * @return string[]
+     */
+    public function uploadMultiple(array $files, string $type = 'image'): array
+    {
+        $paths = [];
+        foreach ($files as $file) {
+            $paths[] = $this->upload($file, $type);
+        }
+        return $paths;
+    }
+
+    /**
+     * @param  string[]  $paths
+     */
+    public function deleteMultiple(array $paths): void
+    {
+        foreach ($paths as $path) {
+            $this->delete($path);
+        }
+    }
 }

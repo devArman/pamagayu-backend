@@ -11,10 +11,8 @@ class PostService
         private MediaUploadService $mediaUpload,
     ) {}
 
-    public function create(array $data, UploadedFile $media, ?UploadedFile $thumbnail = null): Post
+    public function create(array $data, UploadedFile|array $media, ?UploadedFile $thumbnail = null): Post
     {
-        $data['media_path'] = $this->mediaUpload->upload($media, $data['type']);
-
         if ($thumbnail) {
             $data['thumbnail_path'] = $this->mediaUpload->uploadThumbnail($thumbnail);
         }
@@ -23,17 +21,67 @@ class PostService
             $data['published_at'] = now();
         }
 
+        if ($data['type'] === 'image') {
+            $files = is_array($media) ? $media : [$media];
+            $paths = $this->mediaUpload->uploadMultiple($files);
+
+            $data['media_path'] = $paths[0];
+            $post = Post::create($data);
+
+            foreach ($paths as $index => $path) {
+                $post->images()->create([
+                    'image_path' => $path,
+                    'sort_order' => $index,
+                ]);
+            }
+
+            return $post;
+        }
+
+        $data['media_path'] = $this->mediaUpload->upload($media, $data['type']);
+
         return Post::create($data);
     }
 
-    public function update(Post $post, array $data, ?UploadedFile $media = null, ?UploadedFile $thumbnail = null): Post
+    public function update(Post $post, array $data, UploadedFile|array|null $media = null, ?UploadedFile $thumbnail = null): Post
     {
-        if ($media) {
-            $data['media_path'] = $this->mediaUpload->replace($post->media_path, $media, $data['type'] ?? $post->type);
-        }
-
         if ($thumbnail) {
             $data['thumbnail_path'] = $this->mediaUpload->replace($post->thumbnail_path, $thumbnail, 'image');
+        }
+
+        $type = $data['type'] ?? $post->type;
+
+        if ($media && $type === 'image') {
+            $files = is_array($media) ? $media : [$media];
+            $paths = $this->mediaUpload->uploadMultiple($files);
+
+            // Delete old gallery images from storage
+            $oldPaths = $post->images->pluck('image_path')->all();
+            $this->mediaUpload->deleteMultiple($oldPaths);
+            $post->images()->delete();
+
+            // Also delete old media_path if different from gallery images
+            if ($post->media_path && !in_array($post->media_path, $oldPaths)) {
+                $this->mediaUpload->delete($post->media_path);
+            }
+
+            $data['media_path'] = $paths[0];
+
+            foreach ($paths as $index => $path) {
+                $post->images()->create([
+                    'image_path' => $path,
+                    'sort_order' => $index,
+                ]);
+            }
+        } elseif ($media && $type === 'video') {
+            // Delete old gallery images if switching from image to video
+            if ($post->images->isNotEmpty()) {
+                $oldPaths = $post->images->pluck('image_path')->all();
+                $this->mediaUpload->deleteMultiple($oldPaths);
+                $post->images()->delete();
+            }
+
+            $data['media_path'] = $this->mediaUpload->replace($post->media_path, $media, 'video');
         }
 
         // Set published_at when publishing for the first time
@@ -49,6 +97,11 @@ class PostService
 
     public function delete(Post $post): void
     {
+        // Delete gallery images from storage
+        foreach ($post->images as $image) {
+            $this->mediaUpload->delete($image->image_path);
+        }
+
         $this->mediaUpload->delete($post->media_path);
         $this->mediaUpload->delete($post->thumbnail_path);
 
