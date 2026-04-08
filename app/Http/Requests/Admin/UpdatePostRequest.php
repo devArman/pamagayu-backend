@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\Admin;
 
+use Closure;
 use Illuminate\Foundation\Http\FormRequest;
 
 class UpdatePostRequest extends FormRequest
@@ -23,11 +24,21 @@ class UpdatePostRequest extends FormRequest
             'status' => ['required', 'in:draft,published'],
             'is_featured' => ['nullable', 'boolean'],
             'sort_order' => ['nullable', 'integer', 'min:0'],
+            'uploaded_media' => ['nullable', 'array'],
+            'uploaded_media.*' => ['string'],
         ];
 
-        if ($type === 'image') {
+        if (!empty($this->input('uploaded_media'))) {
+            $rules['media'] = ['nullable'];
+        } elseif ($type === 'image') {
             $rules['media'] = ['nullable', 'array', 'max:6'];
-            $rules['media.*'] = ['file', 'mimes:jpg,jpeg,png,webp', 'max:10240'];
+            $rules['media.*'] = ['file', 'max:20480', function (string $attribute, mixed $value, Closure $fail) {
+                $allowed = ['jpg', 'jpeg', 'png', 'webp', 'heic', 'heif'];
+                $ext = strtolower($value->getClientOriginalExtension());
+                if (!in_array($ext, $allowed)) {
+                    $fail('Each image must be a jpg, png, webp, or heic file.');
+                }
+            }];
         } else {
             $rules['media'] = ['nullable', 'file', 'mimes:mp4,mov,webm', 'max:102400'];
         }

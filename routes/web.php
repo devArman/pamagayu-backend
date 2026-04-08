@@ -18,6 +18,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::post('logout', [AuthController::class, 'logout'])->name('logout');
         Route::get('dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
+        Route::post('posts/upload', [PostController::class, 'upload'])->name('posts.upload');
         Route::resource('posts', PostController::class)->except(['show']);
         Route::post('posts/{post}/publish', [PostController::class, 'publish'])->name('posts.publish');
         Route::post('posts/{post}/unpublish', [PostController::class, 'unpublish'])->name('posts.unpublish');

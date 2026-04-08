@@ -29,8 +29,8 @@
     </div>
 
     <div id="media-image" style="display:none;">
-        <input class="form-input" type="file" name="media[]" accept="image/*" multiple>
-        <small style="color: #6b7280; display: block; margin-top: 0.25rem;">You can select up to 6 images.</small>
+        <input class="form-input" type="file" name="media[]" accept="image/*,.heic,.heif" multiple>
+        <small style="color: #6b7280; display: block; margin-top: 0.25rem;">You can select up to 6 images. HEIC (iPhone) files are supported and auto-converted.</small>
     </div>
 
     @error('media') <div class="form-error">{{ $message }}</div> @enderror

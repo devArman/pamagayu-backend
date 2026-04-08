@@ -43,6 +43,31 @@ class PostService
         return Post::create($data);
     }
 
+    public function createFromPaths(array $data, array $mediaPaths, ?UploadedFile $thumbnail = null): Post
+    {
+        if ($thumbnail) {
+            $data['thumbnail_path'] = $this->mediaUpload->uploadThumbnail($thumbnail);
+        }
+
+        if (($data['status'] ?? 'draft') === 'published' && empty($data['published_at'])) {
+            $data['published_at'] = now();
+        }
+
+        $data['media_path'] = $mediaPaths[0];
+        $post = Post::create($data);
+
+        if ($data['type'] === 'image') {
+            foreach ($mediaPaths as $index => $path) {
+                $post->images()->create([
+                    'image_path' => $path,
+                    'sort_order' => $index,
+                ]);
+            }
+        }
+
+        return $post;
+    }
+
     public function update(Post $post, array $data, UploadedFile|array|null $media = null, ?UploadedFile $thumbnail = null): Post
     {
         if ($thumbnail) {
@@ -92,6 +117,50 @@ class PostService
 
         $post->update($data);
 
+        return $post->fresh();
+    }
+
+    public function updateFromPaths(Post $post, array $data, array $mediaPaths, ?UploadedFile $thumbnail = null): Post
+    {
+        if ($thumbnail) {
+            $data['thumbnail_path'] = $this->mediaUpload->replace($post->thumbnail_path, $thumbnail, 'image');
+        }
+
+        $type = $data['type'] ?? $post->type;
+
+        if ($type === 'image') {
+            $oldPaths = $post->images->pluck('image_path')->all();
+            $this->mediaUpload->deleteMultiple($oldPaths);
+            $post->images()->delete();
+
+            if ($post->media_path && !in_array($post->media_path, $oldPaths)) {
+                $this->mediaUpload->delete($post->media_path);
+            }
+
+            $data['media_path'] = $mediaPaths[0];
+
+            foreach ($mediaPaths as $index => $path) {
+                $post->images()->create([
+                    'image_path' => $path,
+                    'sort_order' => $index,
+                ]);
+            }
+        } else {
+            if ($post->images->isNotEmpty()) {
+                $oldPaths = $post->images->pluck('image_path')->all();
+                $this->mediaUpload->deleteMultiple($oldPaths);
+                $post->images()->delete();
+            }
+            $this->mediaUpload->delete($post->media_path);
+            $data['media_path'] = $mediaPaths[0];
+        }
+
+        $newStatus = $data['status'] ?? $post->status;
+        if ($newStatus === 'published' && !$post->published_at) {
+            $data['published_at'] = now();
+        }
+
+        $post->update($data);
         return $post->fresh();
     }
 

@@ -8,6 +8,8 @@ use App\Http\Requests\Admin\UpdatePostRequest;
 use App\Models\Post;
 use App\Services\PostService;
 use Illuminate\Http\RedirectResponse;
+use App\Services\MediaUploadService;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 
@@ -45,17 +47,40 @@ class PostController extends Controller
 
     public function store(StorePostRequest $request): RedirectResponse
     {
-        $data = $request->safe()->except(['media', 'thumbnail']);
+        set_time_limit(300);
+
+        $data = $request->safe()->except(['media', 'thumbnail', 'uploaded_media']);
         $data['is_featured'] = $request->boolean('is_featured');
         $data['sort_order'] = $data['sort_order'] ?? 0;
 
-        $this->postService->create(
-            $data,
-            $request->file('media'),
-            $request->file('thumbnail'),
-        );
+        // Support pre-uploaded files (via AJAX upload endpoint)
+        $uploadedPaths = $request->input('uploaded_media', []);
+        if (!empty($uploadedPaths)) {
+            $this->postService->createFromPaths($data, $uploadedPaths, $request->file('thumbnail'));
+        } else {
+            $this->postService->create($data, $request->file('media'), $request->file('thumbnail'));
+        }
 
         return redirect()->route('admin.posts.index')->with('success', 'Post created successfully.');
+    }
+
+    public function upload(Request $request): JsonResponse
+    {
+        set_time_limit(300);
+
+        $request->validate([
+            'file' => ['required', 'file', 'max:204800'],
+        ]);
+
+        $file = $request->file('file');
+        $ext = strtolower($file->getClientOriginalExtension());
+        $isVideo = in_array($ext, ['mp4', 'mov', 'webm']);
+        $type = $isVideo ? 'video' : 'image';
+
+        $mediaUpload = app(MediaUploadService::class);
+        $path = $mediaUpload->upload($file, $type);
+
+        return response()->json(['path' => $path]);
     }
 
     public function edit(Post $post): View
@@ -67,16 +92,18 @@ class PostController extends Controller
 
     public function update(UpdatePostRequest $request, Post $post): RedirectResponse
     {
-        $data = $request->safe()->except(['media', 'thumbnail']);
+        set_time_limit(300);
+
+        $data = $request->safe()->except(['media', 'thumbnail', 'uploaded_media']);
         $data['is_featured'] = $request->boolean('is_featured');
         $data['sort_order'] = $data['sort_order'] ?? 0;
 
-        $this->postService->update(
-            $post,
-            $data,
-            $request->file('media'),
-            $request->file('thumbnail'),
-        );
+        $uploadedPaths = $request->input('uploaded_media', []);
+        if (!empty($uploadedPaths)) {
+            $this->postService->updateFromPaths($post, $data, $uploadedPaths, $request->file('thumbnail'));
+        } else {
+            $this->postService->update($post, $data, $request->file('media'), $request->file('thumbnail'));
+        }
 
         return redirect()->route('admin.posts.index')->with('success', 'Post updated successfully.');
     }
