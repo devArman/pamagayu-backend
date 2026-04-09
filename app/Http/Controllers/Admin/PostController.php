@@ -64,23 +64,97 @@ class PostController extends Controller
         return redirect()->route('admin.posts.index')->with('success', 'Post created successfully.');
     }
 
-    public function upload(Request $request): JsonResponse
+    public function uploadChunk(Request $request): JsonResponse
     {
         set_time_limit(300);
 
         $request->validate([
-            'file' => ['required', 'file', 'max:204800'],
+            'chunk' => ['required', 'file'],
+            'chunk_index' => ['required', 'integer', 'min:0'],
+            'total_chunks' => ['required', 'integer', 'min:1'],
+            'upload_id' => ['required', 'string'],
+            'filename' => ['required', 'string'],
         ]);
 
-        $file = $request->file('file');
-        $ext = strtolower($file->getClientOriginalExtension());
+        $uploadId = preg_replace('/[^a-zA-Z0-9_-]/', '', $request->input('upload_id'));
+        $chunkIndex = $request->integer('chunk_index');
+        $totalChunks = $request->integer('total_chunks');
+        $originalFilename = $request->input('filename');
+
+        $tmpDir = storage_path('app/chunks/' . $uploadId);
+        if (!is_dir($tmpDir)) {
+            mkdir($tmpDir, 0755, true);
+        }
+
+        $request->file('chunk')->move($tmpDir, 'chunk_' . $chunkIndex);
+
+        // Check if all chunks received
+        $receivedChunks = count(glob($tmpDir . '/chunk_*'));
+        if ($receivedChunks < $totalChunks) {
+            return response()->json(['status' => 'partial', 'received' => $receivedChunks]);
+        }
+
+        // All chunks received — assemble the file
+        $ext = strtolower(pathinfo($originalFilename, PATHINFO_EXTENSION));
         $isVideo = in_array($ext, ['mp4', 'mov', 'webm']);
-        $type = $isVideo ? 'video' : 'image';
+        $directory = $isVideo ? 'videos' : 'images';
 
-        $mediaUpload = app(MediaUploadService::class);
-        $path = $mediaUpload->upload($file, $type);
+        $storageDir = storage_path('app/public/' . $directory);
+        if (!is_dir($storageDir)) {
+            mkdir($storageDir, 0755, true);
+        }
 
-        return response()->json(['path' => $path]);
+        $finalFilename = \Illuminate\Support\Str::random(40) . '.' . $ext;
+        $finalPath = $storageDir . '/' . $finalFilename;
+
+        $out = fopen($finalPath, 'wb');
+        for ($i = 0; $i < $totalChunks; $i++) {
+            $chunkPath = $tmpDir . '/chunk_' . $i;
+            $in = fopen($chunkPath, 'rb');
+            stream_copy_to_stream($in, $out);
+            fclose($in);
+            unlink($chunkPath);
+        }
+        fclose($out);
+        rmdir($tmpDir);
+
+        $storagePath = $directory . '/' . $finalFilename;
+
+        // If HEIC, convert to JPEG
+        if (in_array($ext, ['heic', 'heif'])) {
+            try {
+                $jpgFilename = \Illuminate\Support\Str::random(40) . '.jpg';
+                $jpgPath = $storageDir . '/' . $jpgFilename;
+
+                $imagick = new \Imagick();
+                $imagick->readImage($finalPath);
+                $imagick->setImageFormat('jpeg');
+                $imagick->setImageCompressionQuality(85);
+
+                $orientation = $imagick->getImageOrientation();
+                switch ($orientation) {
+                    case \Imagick::ORIENTATION_BOTTOMRIGHT:
+                        $imagick->rotateImage('#000', 180);
+                        break;
+                    case \Imagick::ORIENTATION_RIGHTTOP:
+                        $imagick->rotateImage('#000', 90);
+                        break;
+                    case \Imagick::ORIENTATION_LEFTBOTTOM:
+                        $imagick->rotateImage('#000', -90);
+                        break;
+                }
+                $imagick->setImageOrientation(\Imagick::ORIENTATION_TOPLEFT);
+                $imagick->writeImage($jpgPath);
+                $imagick->destroy();
+
+                unlink($finalPath);
+                $storagePath = $directory . '/' . $jpgFilename;
+            } catch (\Exception $e) {
+                // If Imagick fails, keep original file
+            }
+        }
+
+        return response()->json(['status' => 'complete', 'path' => $storagePath]);
     }
 
     public function edit(Post $post): View
