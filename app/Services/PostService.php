@@ -9,7 +9,22 @@ class PostService
 {
     public function __construct(
         private MediaUploadService $mediaUpload,
+        private VideoProcessingService $videoProcessor,
     ) {}
+
+    private function postProcessVideo(Post $post): void
+    {
+        if ($post->type !== 'video' || empty($post->media_path)) {
+            return;
+        }
+
+        $thumb = $this->videoProcessor->processUploadedVideo($post->media_path);
+
+        if ($thumb && empty($post->thumbnail_path)) {
+            $post->thumbnail_path = $thumb;
+            $post->save();
+        }
+    }
 
     public function create(array $data, UploadedFile|array $media, ?UploadedFile $thumbnail = null): Post
     {
@@ -40,7 +55,10 @@ class PostService
 
         $data['media_path'] = $this->mediaUpload->upload($media, $data['type']);
 
-        return Post::create($data);
+        $post = Post::create($data);
+        $this->postProcessVideo($post);
+
+        return $post->fresh();
     }
 
     public function createFromPaths(array $data, array $mediaPaths, ?UploadedFile $thumbnail = null): Post
@@ -65,7 +83,9 @@ class PostService
             }
         }
 
-        return $post;
+        $this->postProcessVideo($post);
+
+        return $post->fresh();
     }
 
     public function update(Post $post, array $data, UploadedFile|array|null $media = null, ?UploadedFile $thumbnail = null): Post
@@ -106,6 +126,12 @@ class PostService
                 $post->images()->delete();
             }
 
+            // Replacing the video; clear stale thumbnail so post-processing
+            // can attach a fresh one derived from the new file.
+            $this->mediaUpload->delete($post->thumbnail_path);
+            $post->thumbnail_path = null;
+            $data['thumbnail_path'] = $data['thumbnail_path'] ?? null;
+
             $data['media_path'] = $this->mediaUpload->replace($post->media_path, $media, 'video');
         }
 
@@ -116,6 +142,11 @@ class PostService
         }
 
         $post->update($data);
+        $post->refresh();
+
+        if ($media && $type === 'video') {
+            $this->postProcessVideo($post);
+        }
 
         return $post->fresh();
     }
@@ -152,6 +183,9 @@ class PostService
                 $post->images()->delete();
             }
             $this->mediaUpload->delete($post->media_path);
+            $this->mediaUpload->delete($post->thumbnail_path);
+            $post->thumbnail_path = null;
+            $data['thumbnail_path'] = $data['thumbnail_path'] ?? null;
             $data['media_path'] = $mediaPaths[0];
         }
 
@@ -161,6 +195,12 @@ class PostService
         }
 
         $post->update($data);
+        $post->refresh();
+
+        if ($type === 'video') {
+            $this->postProcessVideo($post);
+        }
+
         return $post->fresh();
     }
 
