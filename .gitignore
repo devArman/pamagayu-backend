@@ -18,6 +18,7 @@
 /public/storage
 /public/images
 /public/videos
+/public/thumbs
 /storage/*.key
 /storage/pail
 /vendor
